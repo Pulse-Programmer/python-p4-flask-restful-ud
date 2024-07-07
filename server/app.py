@@ -3,6 +3,7 @@
 from flask import Flask, request, make_response
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
+from werkzeug.exceptions import NotFound
 
 from models import db, Newsletter
 
@@ -79,9 +80,36 @@ class NewsletterByID(Resource):
         )
 
         return response
+    
+    def patch(self, id):
+        newsletter = Newsletter.query.filter_by(id=id).first()
+        
+        data = request.form
+        for attr in data:
+            setattr(newsletter, attr, data.get(attr))
+            
+        db.session.add(newsletter)
+        db.session.commit()
+        
+        response_dict = newsletter.to_dict()
+        
+        return make_response(response_dict, 200)
+    
+    def delete(self, id):
+        newsletter = Newsletter.query.filter_by(id=id).first()
+        
+        db.session.delete(newsletter)
+        db.session.commit()
+        
+        return make_response({'message': 'deleted successfully'}, 200)
 
 api.add_resource(NewsletterByID, '/newsletters/<int:id>')
 
+# @app.errorhandler(NotFound)
+# def not_found(error):
+#     return make_response({'message': 'Resource Not found'}, 404)
+
+# app.register_error_handler(404, not_found)
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
